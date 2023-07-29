@@ -43,7 +43,7 @@ async def get_current_user(request: Request):
 
 @router.get("/status")
 async def status():
-    return {"status": "ok"}
+    return {"status": "ok", "message": "RealChar is running smoothly!"}
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -57,9 +57,12 @@ async def characters():
     catalog: CatalogManager = CatalogManager.get_instance()
     return [
         {
+            "character_id": character.character_id,
             "name": character.name,
             "source": character.source,
             "voice_id": character.voice_id,
+            "author_name": character.author_name,
+            "image_url": f'https://storage.googleapis.com/assistly/static/realchar/{character.character_id}.jpg',
         } for character in catalog.characters.values()
     ]
 
