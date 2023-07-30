@@ -47,6 +47,68 @@ enum LlmOption: RawRepresentable, Hashable, CaseIterable, Identifiable, Codable 
     }
 }
 
+enum LanguageOption: RawRepresentable, Hashable, CaseIterable, Identifiable, Codable {
+
+    case english, spanish, french, german, italian, portuguese, polish, hindi
+
+    init?(rawValue: String) {
+        for option in LanguageOption.allCases {
+            if rawValue == option.rawValue {
+                self = option
+                return
+            }
+        }
+        return nil
+    }
+
+    var id: String { rawValue }
+    var rawValue: String {
+        switch self {
+        case .english:
+            return "en-US"
+        case .spanish:
+            return "es-ES"
+        case .french:
+            return "fr-FR"
+        case .german:
+            return "de-DE"
+        case .italian:
+            return "it-IT"
+        case .portuguese:
+            return "pt-PT"
+        case .polish:
+            return "pl-PL"
+        case .hindi:
+            return "hi-IN"
+        }
+    }
+
+    var displayName: String {
+        switch self {
+        case .english:
+            return "English"
+        case .spanish:
+            return "Spanish"
+        case .french:
+            return "French"
+        case .german:
+            return "German"
+        case .italian:
+            return "Italian"
+        case .portuguese:
+            return "Portuguese"
+        case .polish:
+            return "Polish"
+        case .hindi:
+            return "Hindi"
+        }
+    }
+
+    var locale: Locale {
+        Locale(identifier: rawValue)
+    }
+}
+
 struct SettingsView: View {
     @EnvironmentObject private var userSettings: UserSettings
     @EnvironmentObject private var preferenceSettings: PreferenceSettings
@@ -98,12 +160,23 @@ struct SettingsView: View {
                                     Font.custom("Prompt", size: 18).weight(.medium)
                                 )
 
-                            Text("LLM Model?")
-                                .font(
-                                    Font.custom("Prompt", size: 16)
-                                )
+                            Picker("Conversation Language?", selection: $preferenceSettings.languageOption) {
+                                ForEach(LanguageOption.allCases) { languageOption in
+                                    Text(languageOption.displayName)
+                                        .font(
+                                            Font.custom("Prompt", size: 16)
+                                        )
+                                        .tag(languageOption)
+                                }
+                            }
+                            .font(
+                                Font.custom("Prompt", size: 16)
+                            )
+                            .tint(.primary)
+                            .padding(.bottom, 2)
+                            .pickerStyle(.navigationLink)
 
-                            Picker("LLM Model", selection: $preferenceSettings.llmOption) {
+                            Picker("LLM Model?", selection: $preferenceSettings.llmOption) {
                                 ForEach(LlmOption.allCases) { llmOption in
                                     Text(llmOption.displayName)
                                         .font(
@@ -112,8 +185,12 @@ struct SettingsView: View {
                                         .tag(llmOption)
                                 }
                             }
+                            .font(
+                                Font.custom("Prompt", size: 16)
+                            )
+                            .tint(.primary)
                             .padding(.bottom, 2)
-                            .pickerStyle(.segmented)
+                            .pickerStyle(.navigationLink)
 
                             if UIDevice.current.userInterfaceIdiom == .phone {
                                 Toggle(isOn: $preferenceSettings.hapticFeedback) {

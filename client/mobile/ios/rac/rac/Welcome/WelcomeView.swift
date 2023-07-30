@@ -14,7 +14,7 @@ struct WelcomeView: View {
     @StateObject var welcomeViewModel = WelcomeViewModel()
 
     let webSocket: any WebSocket
-    @StateObject var webSocketConnectionStatusObserver = WebSocketConnectionStatusObserver(delay: .seconds(0.5))
+    @StateObject var webSocketConnectionStatusObserver = WebSocketConnectionStatusObserver(delay: .seconds(1))
     @State var invalidAttempts = 0
     enum Tab {
         case about, config, settings
@@ -69,6 +69,12 @@ struct WelcomeView: View {
                             simpleError()
                             invalidAttempts += 1
                         }
+                    }, loadCharacters: {
+                        do {
+                            options = try await welcomeViewModel.loadCharacters()
+                        } catch {
+                            print(error)
+                        }
                     })
                         .padding(.horizontal, 48)
                 case .settings:
@@ -80,10 +86,13 @@ struct WelcomeView: View {
                     VStack {
                         Button {
                             if webSocketConnectionStatusObserver.status == .disconnected, let characterId = character?.id {
-                                webSocket.connectSession(llmOption: preferenceSettings.llmOption,
-                                                         characterId: characterId,
-                                                         userId: userSettings.userId,
-                                                         token: userSettings.userToken)
+                                userSettings.checkUserLoggedIn(useCache: false) { _ in
+                                    webSocket.connectSession(languageOption: preferenceSettings.languageOption,
+                                                             llmOption: preferenceSettings.llmOption,
+                                                             characterId: characterId,
+                                                             userId: userSettings.userId,
+                                                             token: userSettings.userToken)
+                                }
                             }
                         } label: {
                             Text(webSocketConnectionStatusObserver.debouncedStatus == .disconnected ? "Failed to connect to server, tap to retry" : "Connecting to server...")
@@ -122,6 +131,11 @@ struct WelcomeView: View {
                 reconnectWebSocket(characterId: characterId)
             }
         }
+        .onChange(of: preferenceSettings.languageOption) { newValue in
+            if let characterId = character?.id {
+                reconnectWebSocket(characterId: characterId)
+            }
+        }
         .onChange(of: userSettings.isLoggedIn) { newValue in
             if let characterId = character?.id {
                 reconnectWebSocket(characterId: characterId)
@@ -138,11 +152,14 @@ struct WelcomeView: View {
             webSocket.onConnectionChanged = { status in
                 self.webSocketConnectionStatusObserver.update(status: webSocket.status)
             }
-            webSocket.connectSession(llmOption: preferenceSettings.llmOption,
-                                     characterId: characterId,
-                                     userId: userSettings.userId,
-                                     token: userSettings.userToken)
-            onWebSocketReconnected()
+            userSettings.checkUserLoggedIn() { _ in
+                webSocket.connectSession(languageOption: preferenceSettings.languageOption,
+                                         llmOption: preferenceSettings.llmOption,
+                                         characterId: characterId,
+                                         userId: userSettings.userId,
+                                         token: userSettings.userToken)
+                onWebSocketReconnected()
+            }
         }
     }
 
